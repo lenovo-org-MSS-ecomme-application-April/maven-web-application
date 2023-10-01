@@ -1,0 +1,27 @@
+#######scripted way the pipeline be like below
+
+node {
+
+def mavenHome= tool name: 'maven-3.9.4'
+
+properties([buildDiscarder(logRotator(artifactDaysToKeepStr: '', artifactNumToKeepStr: '5', daysToKeepStr: '', numToKeepStr: '5')), [$class: 'JobLocalConfiguration', changeReasonComment: ''], pipelineTriggers([pollSCM('* * * * *')])])
+
+stage ('CheckOutCode'){
+git credentialsId: 'af822d05-71b3-4f03-ae6e-7b7e12138220', url: 'https://github.com/lenovo-org-MSS-ecomme-application-April/maven-web-application.git'
+}
+stage ('Build'){
+sh "${mavenHome}/bin/mvn clean package"
+}
+stage ('ExecutesonarqubeReport'){
+sh "${mavenHome}/bin/mvn clean sonar:sonar"
+}
+stage ('uploadArtifactsIntoNexus'){
+sh "${mavenHome}/bin/mvn clean deploy"
+}
+stage ('DeployAPPIntoTomcatServer'){
+sshagent(['5fa389e3-544a-40e0-abc5-8c90a7391b84']) {  
+sh "scp -o StrictHostKeyChecking=no target/maven-web-application.war  ec2-user@172.31.5.167:/opt/apache-tomcat-8.5.93/webapps/"
+}
+}
+}
+}
